@@ -5,75 +5,191 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Admin - Cafés List</title>
 	<style>
-		body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; }
-		.container { max-width: 1200px; margin: 0 auto; }
-		.form { display: grid; gap: 10px; margin-bottom: 20px; }
-		.form input, .form textarea, .form select { padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
-		.form button { padding: 10px; background-color: #4CAF50; color: white; border: none; cursor: pointer; }
-		.cafe-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
-		.cafe-card { background-color: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 20px; }
-		.cafe-card button { background-color: #f44336; color: white; border: none; padding: 5px 10px; cursor: pointer; margin-top: 10px; }
-		#auth-section { margin-bottom: 20px; }
-		.error { color: red; }
-		.success { color: green; }
-		#loading { text-align: center; margin: 20px; display: none; }
+		body {
+			font-family: Arial, sans-serif;
+			background-color: #fff; /* White background like Tripadvisor */
+			margin: 0;
+			padding: 20px;
+		}
+		.container {
+			max-width: 1200px;
+			margin: 0 auto;
+		}
+		.form {
+			display: grid;
+			gap: 10px;
+			margin-bottom: 20px;
+		}
+		.form label {
+			font-weight: bold;
+			color: #333;
+		}
+		.form input, .form textarea, .form select {
+			padding: 12px;
+			border: 1px solid #ddd;
+			border-radius: 4px;
+			font-size: 16px;
+		}
+		.form button {
+			padding: 12px;
+			background-color: #00af87; /* Tripadvisor green */
+			color: white;
+			border: none;
+			cursor: pointer;
+			border-radius: 4px;
+			font-weight: bold;
+		}
+		.form button:hover {
+			background-color: #009f78;
+		}
+		.cafe-grid {
+			display: grid;
+			grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+			gap: 25px; /* More white space */
+		}
+		.cafe-card {
+			background-color: #fff;
+			border-radius: 8px;
+			box-shadow: 0 4px 8px rgba(0,0,0,0.1); /* Softer shadow */
+			padding: 15px;
+			transition: transform 0.2s; /* Hover animation like Tripadvisor */
+		}
+		.cafe-card:hover {
+			transform: scale(1.05);
+		}
+		.cafe-card button {
+			background-color: #f44336;
+			color: white;
+			border: none;
+			padding: 8px 15px;
+			cursor: pointer;
+			margin-top: 10px;
+			border-radius: 4px;
+			font-weight: bold;
+		}
+		.cafe-card button:hover {
+			background-color: #d32f2f;
+		}
+		.cafe-card button.edit {
+			background-color: #00af87;
+			margin-right: 10px;
+		}
+		.cafe-card button.edit:hover {
+			background-color: #009f78;
+		}
+		#auth-section {
+			margin-bottom: 30px;
+			padding: 20px;
+			background-color: #f9f9f9;
+			border-radius: 8px;
+			box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+		}
+		#logout-button {
+			background-color: #f44336;
+			color: white;
+			padding: 12px 20px;
+			border: none;
+			cursor: pointer;
+			border-radius: 4px;
+			font-weight: bold;
+			margin-bottom: 20px;
+			display: none;
+		}
+		#logout-button:hover {
+			background-color: #d32f2f;
+		}
+		.error {
+			color: red;
+			margin-top: 10px;
+		}
+		.success {
+			color: #00af87;
+			margin-top: 10px;
+		}
+		#loading {
+			text-align: center;
+			margin: 20px;
+			display: none;
+			color: #00af87;
+		}
 		/* Modal Styles */
 		.modal {
-			display: none; /* Hidden by default */
-			position: fixed; /* Stay in place */
-			z-index: 1; /* Sit on top */
+			display: none;
+			position: fixed;
+			z-index: 1000;
 			left: 0;
 			top: 0;
-			width: 100%; /* Full width */
-			height: 100%; /* Full height */
-			overflow: auto; /* Enable scroll if needed */
-			background-color: rgb(0,0,0); /* Fallback color */
-			background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+			width: 100%;
+			height: 100%;
+			overflow: auto;
+			background-color: rgba(0,0,0,0.4);
+			opacity: 0;
+			transition: opacity 0.3s ease; /* Fade-in */
+		}
+		.modal.visible {
+			opacity: 1;
 		}
 		.modal-content {
 			background-color: #fefefe;
-			margin: 15% auto; /* 15% from the top and centered */
+			margin: 15% auto;
 			padding: 20px;
 			border: 1px solid #888;
-			width: 80%; /* Could be more or less, depending on screen size */
+			width: 80%;
+			max-width: 600px;
+			border-radius: 8px;
+			box-shadow: 0 4px 8px rgba(0,0,0,0.2);
 		}
 		.close {
 			color: #aaa;
 			float: right;
 			font-size: 28px;
 			font-weight: bold;
-		}
-		.close:hover,
-		.close:focus {
-			color: black;
-			text-decoration: none;
 			cursor: pointer;
+		}
+		.close:hover, .close:focus {
+			color: #333;
+			text-decoration: none;
+		}
+		h1, h2 {
+			color: #333;
+			margin-bottom: 20px;
+		}
+		select[multiple] {
+			height: 120px;
 		}
 	</style>
 </head>
 <body>
 <div class="container">
 	<h1>Admin - Manage Cafés</h1>
-	<button id="logout-button" style="display: none; background-color: #f44336; color: white; padding: 10px; border: none; cursor: pointer;">Logout</button>
+	<button id="logout-button">Logout</button>
 	<div id="auth-section">
 		<h2>Login</h2>
 		<form id="login-form" class="form">
-			<label for="email">Email</label><input id="email" placeholder="Email" required>
-			<label for="password">Password</label><input id="password" type="password" placeholder="Password" required>
+			<label for="email">Email</label>
+			<input id="email" placeholder="Email" required>
+			<label for="password">Password</label>
+			<input id="password" type="password" placeholder="Password" required>
 			<button type="submit">Login</button>
 		</form>
 		<p id="auth-error" class="error"></p>
 	</div>
 	<h2>Add New Cafe</h2>
 	<form class="form" id="add-form">
-		<label for="title">Title</label><input id="title" placeholder="Title" required>
-		<label for="city">City</label><input id="city" placeholder="City" required>
-		<label for="description">Description</label><textarea id="description" placeholder="Description" required></textarea>
-		<label for="image_url">Img URL</label><input id="image_url" placeholder="Image URL">
-		<label for="best_for">Best for</label><select id="best_for" required>
-		<option value="" disabled selected>Select Best For</option>
-	</select>
-		<label for="also_good_for">Also good for</label><select id="also_good_for" multiple></select>
+		<label for="title">Title</label>
+		<input id="title" placeholder="Title" required>
+		<label for="city">City</label>
+		<input id="city" placeholder="City" required>
+		<label for="description">Description</label>
+		<textarea id="description" placeholder="Description" required></textarea>
+		<label for="image_url">Image URL</label>
+		<input id="image_url" placeholder="Image URL">
+		<label for="best_for">Best for</label>
+		<select id="best_for" required>
+			<option value="" disabled selected>Select Best For</option>
+		</select>
+		<label for="also_good_for">Also good for</label>
+		<select id="also_good_for" multiple></select>
 		<button type="submit">Add Cafe</button>
 		<p id="add-error" class="error"></p>
 		<p id="add-success" class="success"></p>
@@ -84,17 +200,23 @@
 	<!-- Edit Modal -->
 	<div id="edit-modal" class="modal">
 		<div class="modal-content">
-			<span class="close">×</span>
+			<span class="close">&times;</span>
 			<h2>Edit Cafe</h2>
 			<form id="edit-form" class="form">
-				<label for="edit_title">Title</label><input id="edit_title" placeholder="Title" required>
-				<label for="edit_city">City</label><input id="edit_city" placeholder="City" required>
-				<label for="edit_description">Description</label><textarea id="edit_description" placeholder="Description" required></textarea>
-				<label for="edit_image_url">Img URL</label><input id="edit_image_url" placeholder="Image URL">
-				<label for="edit_best_for">Best for</label><select id="edit_best_for" required>
-				<option value="" disabled selected>Select Best For</option>
-			</select>
-				<label for="edit_also_good_for">Also good for</label><select id="edit_also_good_for" multiple></select>
+				<label for="edit_title">Title</label>
+				<input id="edit_title" placeholder="Title" required>
+				<label for="edit_city">City</label>
+				<input id="edit_city" placeholder="City" required>
+				<label for="edit_description">Description</label>
+				<textarea id="edit_description" placeholder="Description" required></textarea>
+				<label for="edit_image_url">Image URL</label>
+				<input id="edit_image_url" placeholder="Image URL">
+				<label for="edit_best_for">Best for</label>
+				<select id="edit_best_for" required>
+					<option value="" disabled selected>Select Best For</option>
+				</select>
+				<label for="edit_also_good_for">Also good for</label>
+				<select id="edit_also_good_for" multiple></select>
 				<button type="submit">Update Cafe</button>
 			</form>
 		</div>
@@ -144,12 +266,12 @@
 			this.loading = loading;
 			this.editModal = editModal;
 			this.closeSpan = closeSpan;
-			this.editModal.style.display = 'none';
+			this.editModal.classList.remove('visible'); // Ensure hidden initially
 			
 			// Modal close events
-			this.closeSpan.onclick = () => this.editModal.style.display = 'none';
+			this.closeSpan.onclick = () => this.hideEditModal();
 			window.onclick = (event) => {
-				if (event.target === this.editModal) this.editModal.style.display = 'none';
+				if (event.target === this.editModal) this.hideEditModal();
 			};
 		}
 		
@@ -162,7 +284,7 @@
 			card.appendChild(titleEl);
 			
 			const cityEl = document.createElement('p');
-			cityEl.textContent = cafe.city;
+			cityEl.innerHTML = `<strong>City:</strong> ${cafe.city}`;
 			card.appendChild(cityEl);
 			
 			const descEl = document.createElement('p');
@@ -170,15 +292,18 @@
 			card.appendChild(descEl);
 			
 			const bestForEl = document.createElement('p');
-			bestForEl.textContent = `Best for: ${cafe.best_for}`;
+			bestForEl.className = 'categories';
+			bestForEl.innerHTML = `<strong>Best for:</strong> ${cafe.best_for}`;
 			card.appendChild(bestForEl);
 			
 			const alsoGoodEl = document.createElement('p');
-			alsoGoodEl.textContent = `Also good for: ${cafe.getFormattedAlsoGoodFor()}`;
+			alsoGoodEl.className = 'categories';
+			alsoGoodEl.innerHTML = `<strong>Also good for:</strong> ${cafe.getFormattedAlsoGoodFor()}`;
 			card.appendChild(alsoGoodEl);
 			
 			const editBtn = document.createElement('button');
 			editBtn.textContent = 'Edit';
+			editBtn.className = 'edit';
 			editBtn.onclick = () => onEdit(cafe);
 			card.appendChild(editBtn);
 			
@@ -214,7 +339,11 @@
 				option.selected = cafe.also_good_for.includes(option.value);
 			});
 			
-			this.editModal.style.display = 'block';
+			this.editModal.classList.add('visible');
+		}
+		
+		hideEditModal() {
+			this.editModal.classList.remove('visible');
 		}
 		
 		hideLoading() {
@@ -229,7 +358,7 @@
 	// Data Managers / Services
 	class ApiService {
 		async login(email, password) {
-			const data = { email, password };
+			const data = { username: email, password }; // Assuming email is username for JWT
 			const response = await fetch(authUrl, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -251,7 +380,7 @@
 				headers: { 'Authorization': `Bearer ${token}` },
 				credentials: 'include'
 			});
-			if (!response.ok) throw new Error('Network error');
+			if (!response.ok) throw new Error('Failed to load cafes');
 			const data = await response.json();
 			return data.map(item => new Cafe(item));
 		}
@@ -399,7 +528,7 @@
 			try {
 				await apiService.updateCafe(this.currentEditCafe.title, this.currentEditCafe.city, data, this.token);
 				uiRenderer.showMessage(uiRenderer.addSuccess, 'Cafe updated successfully!');
-				uiRenderer.editModal.style.display = 'none';
+				uiRenderer.hideEditModal();
 				this.cafes = await apiService.loadCafes(this.token);
 				this.updateUI();
 			} catch (error) {
