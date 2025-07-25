@@ -1,0 +1,30 @@
+Jul-21-Cafes-List-Api
+tree -a -I "__pycache__|venv|.idea"
+│
+├── .env
+├── .gitignore
+├── app
+│    ├── __init__.py
+│    ├── auth.py
+│    ├── config.py
+│    ├── data
+│    │    └── data.py
+│    ├── database.py
+│    ├── instance
+│    │    └── cafes.db
+│    ├── main.py
+│    ├── models.py
+│    ├── schemas.py
+│    └── scripts
+│         └── seed_db.py
+├── public
+│    ├── admin.html
+│    ├── admin_new.html
+│    ├── index.html
+│    ├── index_new.html
+│    └── no-image.jpg
+├── requirements.txt
+├── run.py
+└── structure.txt
+
+6 directories, 20 files

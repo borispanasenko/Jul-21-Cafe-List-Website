@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Cafés List</title>
+	<style>
+		body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; }
+		.container { max-width: 1200px; margin: 0 auto; }
+		.filters { display: flex; gap: 10px; margin-bottom: 20px; align-items: center; }
+		.filters input, .filters select { padding: 10px; flex: 1; border: 1px solid #ddd; border-radius: 4px; }
+		.filters button { padding: 10px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; }
+		.filters button:hover { background-color: #45a049; }
+		.cafe-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+		.cafe-card { background-color: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 20px; }
+		.cafe-card img { width: 100%; height: 200px; object-fit: cover; border-radius: 4px; }
+		.cafe-card h2 { margin: 10px 0; font-size: 1.5em; }
+		.cafe-card p { margin: 5px 0; color: #555; }
+		.cafe-card .categories { font-style: italic; }
+		#loading { text-align: center; margin: 20px; display: none; }
+		select[multiple] { width: 200px; height: 100px; }
+		.error { color: red; text-align: center; }
+		.empty { text-align: center; color: #555; }
+	</style>
+</head>
+<body>
+<div class="container">
+	<h1>Cafés List</h1>
+	<div class="filters">
+		<input id="city-filter" placeholder="Filter by city (e.g., Kyiv)">
+		<select id="best-for-filter">
+			<option value="" selected>All Categories</option>
+		</select>
+		<select id="also-good-for-filter" multiple>
+			<option value="" disabled>Select Also Good For</option>
+		</select>
+		<button id="reset-filters">Reset Filters</button>
+	</div>
+	<div id="loading">Loading...</div>
+	<div class="cafe-grid" id="cafe-grid"></div>
+</div>
+<script>
+	// 1. Определение констант URL
+	const apiUrl = 'http://127.0.0.1:8000/cafes';
+	const categoriesUrl = 'http://127.0.0.1:8000/categories';
+	
+	// 2. Определение Интерфейсов/Типов для Данных (Схем) - используя JSDoc для типизации в JS
+	/** @typedef {{id: number, title: string, city: string, description: string, image_url: string|null, best_for: string|null, also_good_for: string[]}} CafeData */
+	/** @typedef {{name: string}} Category */
+		
+		// 3. Создание Фронтенд-Моделей (Классов или Адаптеров)
+	class Cafe {
+		constructor(data) {
+			this.id = data.id;
+			this.title = data.title;
+			this.city = data.city;
+			this.description = data.description;
+			this.image_url = data.image_url;
+			this.best_for = data.best_for || 'N/A';
+			this.also_good_for = data.also_good_for || [];
+		}
+		
+		getNormalizedCity() {
+			return normalizeString(this.city);
+		}
+		
+		getNormalizedBestFor() {
+			return normalizeString(this.best_for);
+		}
+		
+		getNormalizedAlsoGoodFor() {
+			return this.also_good_for.map(normalizeString);
+		}
+		
+		getFormattedAlsoGoodFor() {
+			return this.also_good_for.join(', ') || 'None';
+		}
+	}
+	
+	// 4. Компоненты UI
+	class CafeRenderer {
+		constructor(grid) {
+			this.grid = grid;
+		}
+		
+		createCafeCard(cafe) {
+			const card = document.createElement('div');
+			card.className = 'cafe-card';
+			
+			const img = document.createElement('img');
+			img.src = cafe.image_url || './no-image.jpg';
+			img.alt = cafe.title;
+			img.onerror = () => { img.src = 'https://via.placeholder.com/300x200?text=No+Image'; };
+			card.appendChild(img);
+			
+			const title = document.createElement('h2');
+			title.textContent = cafe.title;
+			card.appendChild(title);
+			
+			const city = document.createElement('p');
+			city.innerHTML = `<strong>City:</strong> ${cafe.city}`;
+			card.appendChild(city);
+			
+			const description = document.createElement('p');
+			description.textContent = cafe.description;
+			card.appendChild(description);
+			
+			const bestFor = document.createElement('p');
+			bestFor.className = 'categories';
+			bestFor.innerHTML = `<strong>Best for:</strong> ${cafe.best_for}`;
+			card.appendChild(bestFor);
+			
+			const alsoGoodFor = document.createElement('p');
+			alsoGoodFor.className = 'categories';
+			alsoGoodFor.innerHTML = `<strong>Also good for:</strong> ${cafe.getFormattedAlsoGoodFor()}`;
+			card.appendChild(alsoGoodFor);
+			
+			return card;
+		}
+		
+		renderCafes(cafes) {
+			this.grid.innerHTML = '';
+			if (cafes.length === 0) {
+				const empty = document.createElement('p');
+				empty.className = 'empty';
+				empty.textContent = 'No cafes found matching your filters.';
+				this.grid.appendChild(empty);
+				return;
+			}
+			cafes.forEach(cafe => this.grid.appendChild(this.createCafeCard(cafe)));
+		}
+		
+		showError(message) {
+			this.grid.innerHTML = `<p class="error">Error: ${message}</p>`;
+		}
+	}
+	
+	// 5. Сервисы/Менеджеры Данных
+	class ApiService {
+		async loadCategories() {
+			const response = await fetch(categoriesUrl);
+			if (!response.ok) throw new Error('Failed to load categories');
+			return await response.json();
+		}
+		
+		async loadCafes() {
+			const response = await fetch(apiUrl, { credentials: 'include' });
+			if (!response.ok) {
+				const errorData = await response.json();
+				throw new Error(errorData.detail || 'Failed to load cafes');
+			}
+			const data = await response.json();
+			return data.map(item => new Cafe(item)); // Маппинг в модели
+		}
+	}
+	
+	// 6. Менеджмент Состояния
+	class AppState {
+		constructor() {
+			this.cafes = [];
+			this.categories = [];
+			this.eventTarget = new EventTarget();
+		}
+		
+		async init() {
+			loading.style.display = 'block';
+			try {
+				this.categories = await apiService.loadCategories();
+				this.populateFilters();
+			} catch (error) {
+				renderer.showError(`Error loading categories: ${error.message}`);
+			}
+			
+			try {
+				this.cafes = await apiService.loadCafes();
+				this.updateUI();
+			} catch (error) {
+				renderer.showError(`Error loading cafes: ${error.message}`);
+			} finally {
+				loading.style.display = 'none';
+			}
+		}
+		
+		populateFilters() {
+			bestForFilter.innerHTML = '<option value="" selected>All Categories</option>';
+			alsoGoodForFilter.innerHTML = '';
+			this.categories.forEach(cat => {
+				const option = document.createElement('option');
+				option.value = cat.name;
+				option.textContent = cat.name;
+				bestForFilter.appendChild(option.cloneNode(true));
+				alsoGoodForFilter.appendChild(option.cloneNode(true));
+			});
+		}
+		
+		getFilteredCafes() {
+			const city = normalizeString(cityFilter.value);
+			const bestFor = normalizeString(bestForFilter.value);
+			const alsoGoodFor = Array.from(alsoGoodForFilter.selectedOptions).map(opt => normalizeString(opt.value));
+			return this.cafes.filter(cafe =>
+				(!city || cafe.getNormalizedCity().includes(city)) &&
+				(!bestFor ||
+					cafe.getNormalizedBestFor().includes(bestFor) ||
+					cafe.getNormalizedAlsoGoodFor().some(cat => cat.includes(bestFor))
+				) &&
+				(alsoGoodFor.length === 0 ||
+					cafe.getNormalizedAlsoGoodFor().some(cat => alsoGoodFor.includes(cat)))
+			);
+		}
+		
+		updateUI() {
+			const filtered = this.getFilteredCafes();
+			renderer.renderCafes(filtered);
+			this.dispatchChange();
+		}
+		
+		resetFilters() {
+			cityFilter.value = '';
+			bestForFilter.value = '';
+			Array.from(alsoGoodForFilter.options).forEach(opt => opt.selected = false);
+			this.updateUI();
+		}
+		
+		onChange(callback) {
+			this.eventTarget.addEventListener('stateChange', callback);
+		}
+		
+		dispatchChange() {
+			this.eventTarget.dispatchEvent(new Event('stateChange'));
+		}
+	}
+	
+	// Вспомогательные утилитарные функции
+	function normalizeString(str) {
+		return str.trim().toLowerCase().replace(/\s+/g, ' ');
+	}
+	
+	// DOM элементы
+	const grid = document.getElementById('cafe-grid');
+	const cityFilter = document.getElementById('city-filter');
+	const bestForFilter = document.getElementById('best-for-filter');
+	const alsoGoodForFilter = document.getElementById('also-good-for-filter');
+	const resetFiltersBtn = document.getElementById('reset-filters');
+	const loading = document.getElementById('loading');
+	
+	// Инициализация
+	const apiService = new ApiService();
+	const renderer = new CafeRenderer(grid);
+	const appState = new AppState();
+	
+	appState.init();
+	
+	// Event listeners
+	let timeout;
+	function debounceFilter() {
+		clearTimeout(timeout);
+		timeout = setTimeout(() => appState.updateUI(), 300);
+	}
+	
+	cityFilter.addEventListener('input', debounceFilter);
+	bestForFilter.addEventListener('change', () => appState.updateUI());
+	alsoGoodForFilter.addEventListener('change', () => appState.updateUI());
+	resetFiltersBtn.addEventListener('click', () => appState.resetFilters());
+</script>
+</body>
+</html>
